@@ -8,6 +8,7 @@ public class LFQueue<T> {
     private AtomicReference<Node<T>> tail;
 
     // Define the class used for the Node structure
+    // A node will contain a point of data and a reference to its next node
     class Node<T>
     {
         T val;
@@ -20,6 +21,72 @@ public class LFQueue<T> {
             next = new AtomicReference<Node<T>>(null);
         }
     }
+
+    // The future object will attach to deferred enqueue and dequeue operations to track status of execution
+    // Contains a result that will hold a dequeued value if available and nothing for an enqueue operation
+    // Contains a boolean flag to signal if the operation has been executed yet
+    class Future<T> {
+        T returnVal;
+        boolean isDone;
+    }
+
+    // A BatchRequest object will hold the information necessary to apply a completed batch to the shared queue
+    // Contains a reference to the first node in the sublist to be appended to the shared queue
+    // Contains a reference to the last node in the sublist to be appeneded to the shared queue
+    // Holds the number of enqueues and dequeues taking place within this batch as well as the
+    // number of excess dequeues that will need to be applied outside of the batch on the shared queue
+    class BatchRequest{
+        Node<T> firstEnq;
+        Node<T> lastEnq;
+        int numEnqs;
+        int numDeqs;
+        int numExcessDeqs;
+    }
+
+    // The NodeWithCount object is used specifically for the head and the tail of the shared list
+    // It contains the node reference as well as a counter that allows for quick calculation of the queue size
+    class NodeWithCount {
+        Node<T> node;
+        int count;
+    }
+
+    // The Ann (announcement) object holds on to the state of the shared queue before applying a batch
+    // It contains a reference to the head and the tail of the shared queue as well as a reference to the BatchRequest
+    // object being applied
+    class Ann {
+        BatchRequest batchToApply;
+        NodeWithCount oldHead;
+        NodeWithCount oldTail;
+    }
+
+    // The head of our shared queue goes through multiple states. When a batch is not being applied it will be a NodeWithCount
+    // object, but as a batch is applied it will change state to be an Announcment object in order to have other threads
+    // help apply the batch to the shared queue and lock the state of the previous queue. It will have a boolean flag to
+    // signify state
+    class NodeCountOrAnn {
+        boolean isAnnouncement;
+        NodeWithCount nodeWCount;
+        Ann announcement;
+    }
+
+    // A future Operation object will be used to track information in local thread batching and identify the type of
+    // operation as well as a reference to its future operation object
+    class FutureOp {
+        boolean isEnqueue;
+        Future<T> future;
+    }
+
+    // The local ThreadData object will hold the queue being built within a thread before being applied to the shared queue
+    // As well as head and tail references of the subqueue and operation arithmetic information
+    class ThreadData {
+        LinkedList<Node<T>> opsQueue;
+        Node<T> enqHead;
+        Node<T> enqTail;
+        int numEnqs;
+        int numDeqs;
+        int numExcessDeqs;
+    }
+
 
      // Constructor for the Queue
     public LFQueue()

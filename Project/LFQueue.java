@@ -12,7 +12,7 @@ import java.util.*;
 class Node<T>
 {
     T val;
-    Node<T> next;
+    AtomicReference<Node<T>> next;
 
     // Empty Constructor
     public Node(){
@@ -24,7 +24,7 @@ class Node<T>
     Node(T value)
     {
         this.val = value;
-        this.next = null;
+        this.next = new AtomicReference<Node<T>>();
     }
 
     public T getValue(){
@@ -38,20 +38,56 @@ class Node<T>
 
 public class LFQueue<T> {
     // The queue will contain atomic references for both the head and the tail of the queue, enabling atomic setting
-    private AtomicReference<Node<T>> head;
-    private AtomicReference<Node<T>> tail;
+    private AtomicReference<NodeCountOrAnn> head;
+    private AtomicReference<NodeWithCount> tail;
 
 
      // Constructor for the Queue
     public LFQueue()
     {
-        head = new AtomicReference<Node<T>>();
-        tail = new AtomicReference<Node<T>>();
+        // Instantiate the head and tail with a dummy node
+        NodeWithCount dummy = new NodeWithCount(null, 0);
+
+        head = new AtomicReference<NodeCountOrAnn>(new NodeCountOrAnn(dummy));
+        tail = new AtomicReference<NodeWithCount>(dummy);
     }
 
-    public void enqueue(T value)
+    // Attempt to enqueue an item to the shared queue
+    public void enqueueToShared(T value)
     {
-        
+        // Create the new node to enqueue
+        Node<T> newNode = new Node(value);
+
+        while (true)
+        {
+            // Get the current queue tail
+            NodeWithCount tailCount = tail.get();
+
+            // Atempt to link the new node to the tail of the shared queue
+            if (tailCount.node.next.compareAndSet(null, newNode))
+            {
+                // Attempt to update the shared queue's tail with the new NodeWithCount reflecting
+                // the new tail and new size of the queue. If it fails it won't matter as another thread will help
+                tail.compareAndSet(tailCount, new NodeWithCount(newNode, tailCount.count + 1));
+
+                // If we succeeded in appending the new node to the tail of the queue, enqueue has completed
+                break;
+            }
+
+            // If the enqueue didn't help, check if the head contains an announcement the thread needs to help complete
+            NodeCountOrAnn curHead = head.get();
+
+            if (curHead.isAnnouncement)
+            {
+                //executeAnnouncement(curHead.announcement);
+            }
+
+            // If appending a node to the queue fails and the head isn't an announcement, try and help update the tail
+            else
+            {
+                tail.compareAndSet(tailCount, new NodeWithCount(tailCount.node.next, tailCount.count + 1));
+            }
+        }
     }
 
     public T dequeue()

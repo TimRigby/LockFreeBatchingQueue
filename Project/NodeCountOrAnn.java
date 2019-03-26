@@ -6,4 +6,13 @@ public class NodeCountOrAnn {
     boolean isAnnouncement;
     NodeWithCount nodeWCount;
     Announcement announcement;
+
+    // Head of queue will be initialized as a NodeWithCount
+    NodeCountOrAnn(NodeWithCount node)
+    {
+        isAnnouncement = false;
+
+        nodeWCount = node;
+        announcement = null;
+    }
 }

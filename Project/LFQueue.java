@@ -114,6 +114,59 @@ public class LFQueue<T> {
     }
 
 
+    // HelpAnnAndGetHead. This auxiliary method assists announcements in execution,
+    // as long as there is an announcement installed in SQHead.
+
+    private PrtCnt helpAnnAndGetHead(){
+        NodeWithCount head;
+        
+        while (true){
+
+            // Getting the current head
+            head = head.get();
+
+            // Need to see how this translates to java since we don;t have the union struct.
+            if(head.tag == 0){
+                return head.PrtCnt;
+            }
+
+            ExecuteAnn(head.ann);
+        }     
+    }
+
+    // Execute Batch
+    // (1) Setting ann->oldHead to the head of the queue right before committing the batch. 
+    // (2) Installing ann in SQHead.
+    // (3) Linking the batch’s items to SQTail.node->next.
+    // (4) Setting oldTail  eld in the installed announcement ann.
+    // (5) Promoting SQTail to point to the last node enqueued by the batch operation (and increasing its enqueue count by the number of enqueues).
+    // (6) Setting SQHead to point to the last node dequeued by the batch operation in place of ann (and increasing its dequeue count by the number of successful dequeues).
+
+    private Node<T> executeBatch(BatchRequest batch){
+        PrtCnt ptr;
+        // Creating a new announcement object and passing the batch request
+        Anouncement ann = new Announcement(batch);
+
+        while (true){
+            // Checking if there is a coliding ongoing batch whose announcement
+            // is installed in the SQHead. 
+            ptr = helpAnnAndGetHead();
+
+            // Set the PtrCnt object returned to oldHead;
+            ann.setOldHead(ptr);
+
+            // Step 2: Installing ann in SQHead
+            if(head.compareAndSet(ptr, ann)){
+                break;
+            }
+
+        }
+        // Calling ExecuteAnn to carry out the batch
+        executeAnnouncement(ann);
+
+        return ptr.getNode();
+    }
+
     public static void main (String[] args){
 
     }

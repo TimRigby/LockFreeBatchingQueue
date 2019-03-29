@@ -42,13 +42,13 @@ public class LFQueue<T> {
     private AtomicReference<NodeWithCount> tail;
 
 
-     // Constructor for the Queue
+    // Constructor for the Queue
     public LFQueue()
     {
         // Instantiate the head and tail with a dummy node
         NodeWithCount dummy = new NodeWithCount(null, 0);
 
-        head = new AtomicReference<NodeCountOrAnn>(new NodeCountOrAnn(dummy));
+        head = new AtomicReference<NodeCountOrAnn>(new NodeCountOrAnn(null, dummy, false));
         tail = new AtomicReference<NodeWithCount>(dummy);
     }
 
@@ -79,7 +79,10 @@ public class LFQueue<T> {
 
             if (curHead.isAnnouncement)
             {
-                //executeAnnouncement(curHead.announcement);
+                /*
+                ~~~~~~~~~~~~~~~~ Implement executeAnn()
+                 */
+                //executeAnn(curHead.announcement);
             }
 
             // If appending a node to the queue fails and the head isn't an announcement, try and help update the tail
@@ -90,19 +93,42 @@ public class LFQueue<T> {
         }
     }
 
+    public T dequeueFromShared()
+    {
+        while (true)
+        {
+            // Get the head reference via helper function
+            NodeCountOrAnn curHead = helpAnnAndGetHead();
+
+            Node<T> headNextNode = (Node<T>) curHead.nodeWCount.node.next.get();
+
+            // If the head's next node is null there is nothing to dequeue
+            if (headNextNode == null)
+                return null;
+
+            // Create the new NodeCountOrAnn object to replace the head
+            //?
+
+            // Otherwise try and update the shared queue's head reference. Need to update the NodeWithCount component of
+            // the head with a new NodeWithCount and the updated size
+            if (head.compareAndSet(curHead, new NodeCountOrAnn(null, new NodeWithCount(headNextNode, curHead.nodeWCount.count - 1), false)))
+            return headNextNode.val;
+        }
+    }
+
     public T dequeue()
     {
         return null;
     }
 
     // FutureEnqueue enqueues a FutureOp object representing an enqueue operation
-    // and returns A pointer to the Future object encapsulated in the created FutureOp will be 
+    // and returns A pointer to the Future object encapsulated in the created FutureOp will be
     // returned by the method, so that the caller could later pass it to the Evaluate method.
     public Future futureEnqueue(FutureOp value){
         return null;
     }
 
-    // FutureDequeue operates similarly, but updates the numbers of pending dequeue operations 
+    // FutureDequeue operates similarly, but updates the numbers of pending dequeue operations
     // and excess dequeues
     public Future futureDequeue(){
         return null;
@@ -117,25 +143,28 @@ public class LFQueue<T> {
     // HelpAnnAndGetHead. This auxiliary method assists announcements in execution,
     // as long as there is an announcement installed in SQHead.
 
-    private PrtCnt helpAnnAndGetHead(){
-        NodeWithCount head;
-        
+    private NodeCountOrAnn helpAnnAndGetHead(){
+        NodeCountOrAnn head;
+
         while (true){
 
             // Getting the current head
-            head = head.get();
+            head = this.head.get();
 
             // Need to see how this translates to java since we don;t have the union struct.
-            if(head.tag == 0){
-                return head.PrtCnt;
+            if(!head.isAnnouncement){
+                return head;
             }
 
-            ExecuteAnn(head.ann);
-        }     
+                   /*
+                ~~~~~~~~~~~~~~~~ Implement executeAnn()
+                 */
+            //ExecuteAnn(head.announcement);
+        }
     }
 
     // Execute Batch
-    // (1) Setting ann->oldHead to the head of the queue right before committing the batch. 
+    // (1) Setting ann->oldHead to the head of the queue right before committing the batch.
     // (2) Installing ann in SQHead.
     // (3) Linking the batch’s items to SQTail.node->next.
     // (4) Setting oldTail  eld in the installed announcement ann.
@@ -143,25 +172,31 @@ public class LFQueue<T> {
     // (6) Setting SQHead to point to the last node dequeued by the batch operation in place of ann (and increasing its dequeue count by the number of successful dequeues).
 
     private Node<T> executeBatch(BatchRequest batch){
-        PrtCnt ptr;
+        NodeCountOrAnn ptr;
         // Creating a new announcement object and passing the batch request
-        Anouncement ann = new Announcement(batch);
+        Announcement ann = new Announcement(batch);
 
         while (true){
             // Checking if there is a coliding ongoing batch whose announcement
-            // is installed in the SQHead. 
+            // is installed in the SQHead.
             ptr = helpAnnAndGetHead();
 
             // Set the PtrCnt object returned to oldHead;
-            ann.setOldHead(ptr);
+            /*
+            ~~~~~~~~~~~~~ Implement Announcement.setOldHead function
+             */
+            //ann.setOldHead(ptr.nodeWCount);
 
             // Step 2: Installing ann in SQHead
-            if(head.compareAndSet(ptr, ann)){
+            if(head.compareAndSet(ptr, new NodeCountOrAnn(ann, null, true))){
                 break;
             }
 
         }
         // Calling ExecuteAnn to carry out the batch
+               /*
+                ~~~~~~~~~~~~~~~~ Implement executeAnn()
+                 */
         executeAnnouncement(ann);
 
         return ptr.getNode();

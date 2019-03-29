@@ -8,11 +8,10 @@ public class NodeCountOrAnn {
     Announcement announcement;
 
     // Head of queue will be initialized as a NodeWithCount
-    NodeCountOrAnn(NodeWithCount node)
+    NodeCountOrAnn(Announcement ann, NodeWithCount node, boolean isAnnouncement)
     {
-        isAnnouncement = false;
-
-        nodeWCount = node;
-        announcement = null;
+        this.announcement = ann;
+        this.nodeWCount = node;
+        this.isAnnouncement = isAnnouncement;
     }
 }

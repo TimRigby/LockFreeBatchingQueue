@@ -5,4 +5,9 @@ public class Announcement {
     BatchRequest batchToApply;
     NodeWithCount oldHead;
     NodeWithCount oldTail;
+
+    Announcement(BatchRequest batch)
+    {
+        this.batchToApply = batch;
+    }
 }

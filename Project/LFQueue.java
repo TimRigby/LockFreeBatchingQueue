@@ -242,6 +242,38 @@ public class LFQueue<T> {
         //UpdateHead(annHead);
     }
 
+    /*
+        UpdateHead is to update SQHead to point to the last node dequeued by the batch. 
+        This update uninstalls the announcement and completes its handling.
+
+    */
+    private void updateHead(NodeCountOrAnn ann){
+        Node<T> newHeadNode = new Node<>();
+        int oldQueueSize = ann.announcement.oldTail.count - ann.announcement.oldHead.count;
+        int successfulDeqsNum = ann.announcement.batchToApply.numDeqs;
+
+        //#successfulDequeues = #dequeues max{#excessDequeues n,0}
+
+        if (ann.announcement.batchToApply.numExcessDeqs > oldQueueSize){
+            successfulDeqsNum -= ann.announcement.batchToApply.numExcessDeqs - oldQueueSize;
+        }
+
+        if(successfulDeqsNum == 0){
+            head.compareAndSet(ann, new NodeCountOrAnn(null, ann.announcement.oldHead, false));
+            return;
+        }
+
+        if (oldQueueSize > successfulDeqsNum){
+            newHeadNode = getNthNode(ann.announcement.oldHead.node, successfulDeqsNum);
+        }else{
+            newHeadNode = getNthNode(ann.announcement.oldTail.node, successfulDeqsNum);
+        }
+
+        head.compareAndSet(ann, new NodeCountOrAnn(null, new NodeWithCount(newHeadNode, ann.announcement.oldHead.count 
+                            + successfulDeqsNum), false));
+
+    }
+
     private Node<T> getNthNode(Node<T> node, int n)
     {
         for (int i = 0; i < n; i++)

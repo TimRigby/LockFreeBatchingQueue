@@ -242,6 +242,14 @@ public class LFQueue<T> {
         //UpdateHead(annHead);
     }
 
+    private Node<T> getNthNode(Node<T> node, int n)
+    {
+        for (int i = 0; i < n; i++)
+            node = node.next.get();
+
+        return node;
+    }
+
     public static void main (String[] args){
 
     }

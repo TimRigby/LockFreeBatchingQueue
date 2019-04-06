@@ -175,6 +175,7 @@ public class LFQueue<T> {
         NodeCountOrAnn ptr;
         // Creating a new announcement object and passing the batch request
         Announcement ann = new Announcement(batch);
+        NodeCountOrAnn newHead;
 
         while (true){
             // Checking if there is a coliding ongoing batch whose announcement
@@ -188,18 +189,57 @@ public class LFQueue<T> {
             //ann.setOldHead(ptr.nodeWCount);
 
             // Step 2: Installing ann in SQHead
-            if(head.compareAndSet(ptr, new NodeCountOrAnn(ann, null, true))){
+            newHead = new NodeCountOrAnn(ann, null, true);
+            if(head.compareAndSet(ptr, newHead)){
                 break;
             }
 
         }
         // Calling ExecuteAnn to carry out the batch
-               /*
-                ~~~~~~~~~~~~~~~~ Implement executeAnn()
-                 */
-        executeAnnouncement(ann);
+        executeAnnouncement(newHead);
 
-        return ptr.getNode();
+        return ptr.nodeWCount.node;
+    }
+
+    private void executeAnnouncement(NodeCountOrAnn annHead)
+    {
+        NodeWithCount tailAndCnt, annOldTail;
+
+        // Link items to tail and update the announcement
+        while(true)
+        {
+            tailAndCnt = tail.get();
+            annOldTail = annHead.announcement.oldTail;
+
+            // The old tail of the announcement is initially null and is only set to a value when a thread has
+            // successfully linked the new batch list to the end of the shared queue before the batch was applied
+            // So if a value is here, the batch has been applied
+            if (annOldTail.node != null)
+            {
+                break;
+            }
+
+            // Attempt to attach the head of the batch's enqueues to the tail of the current shared list
+            tailAndCnt.node.next.compareAndSet(null, annHead.announcement.batchToApply.firstEnq);
+
+            // If the CAS was successful, store the previous tail in the announcement
+            if (tailAndCnt.node.next.get() == annHead.announcement.batchToApply.firstEnq)
+            {
+                annOldTail = tailAndCnt;
+                annHead.announcement.oldTail = tailAndCnt;
+                break;
+            }
+            // Otherwise help to update the tail to reflect the actual contents of the queue
+            else
+            {
+                tail.compareAndSet(tailAndCnt, new NodeWithCount(tailAndCnt.node.next, tailAndCnt.count + 1));
+            }
+        }
+
+        // Create the new tail which will hold the last node enqueued by the batch and increase the size by the number of enqueues
+        NodeWithCount newTailAndCnt = new NodeWithCount(annHead.announcement.batchToApply.lastEnq, annOldTail.count + annHead.announcement.batchToApply.numEnqs);
+        tail.compareAndSet(annOldTail, newTailAndCnt);
+        //UpdateHead(annHead);
     }
 
     public static void main (String[] args){

@@ -36,6 +36,97 @@ class Node<T>
     }
 }
 
+class TestThreads implements Runnable{
+    private final int id;
+    public AtomicReference<LFQueue<Integer>> queue;
+    public ThreadData thread;
+    
+    TestThreads(LFQueue<Integer> q, int threadId){
+        this.queue = q;
+        this.id = threadId;
+        this.thread = new ThreadData();
+    }
+
+    public void enqueue(T val){
+        Future future;
+
+        if(thread.opsQueue.size() == 0){
+            queue.enqueueToShared(val);
+        }else{
+            future = queue.futureEnqueue(val);
+            evaluate(future);
+        }
+
+    }
+
+    public T dequeue(){
+        Future future;
+
+        if(thread.opsQueue.size() == 0){
+            return queue.dequeueToShared();
+        }else{
+            future = queue.futureEnqueue(val);
+            evaluate(future);
+        }
+        
+        return future.returnVal;
+    }
+
+    // FutureEnqueue enqueues a FutureOp object representing an enqueue operation
+    // and returns A pointer to the Future object encapsulated in the created FutureOp will be
+    // returned by the method, so that the caller could later pass it to the Evaluate method.
+    public Future futureEnqueue(T val){
+        FutureOp futureOp = new FutureOp(true, new Future(val, false));
+
+        // Add in the local linked list code.
+
+        thread.opsQueue.add(futureOp);
+        thread.numEnqs++;
+
+        return futureOp.future;
+    }
+
+    public Future futureDequeue(){
+        FutureOp futureOp = new FutureOp(false, new Future(val, false));
+
+        thread.opsQueue.add(futureOp);
+        thread.numDeqs++;
+
+        // Add in the excess dequeue algorithm.
+
+        return futureOp.future;
+    }
+
+    public void evaluate (Future future){
+        Node<T> oldHead;
+        NodeWithCount head;
+
+        if (future.isDone){
+            return;
+        }
+        
+        if(thread.numEnqs > 0){  
+
+            oldHead = executeBatch(thread.opsQueue);
+            queue.pairFutureWithResults(oldHead);
+
+        }else{
+            head = executeDeqsBatch();
+            pairDeqFuturesWithResults(head.node, head.count);
+        }
+        
+    }
+
+
+
+
+    public void run(){
+
+    }
+
+
+}
+
 public class LFQueue<T> {
     // The queue will contain atomic references for both the head and the tail of the queue, enabling atomic setting
     private AtomicReference<NodeCountOrAnn> head;

@@ -42,18 +42,18 @@ class TestThreads implements Runnable{
     public ThreadData thread;
     
     TestThreads(LFQueue<Integer> q, int threadId){
-        this.queue = q;
+        this.queue = new AtomicReference<>(q);
         this.id = threadId;
         this.thread = new ThreadData();
     }
 
-    public void enqueue(T val){
+    public void enqueue(int val){
         Future future;
 
         if(thread.opsQueue.size() == 0){
-            queue.enqueueToShared(val);
+            queue.get().enqueueToShared(val);
         }else{
-            future = queue.futureEnqueue(val);
+            future = queue.get().futureEnqueue(val);
             evaluate(future);
         }
 
@@ -63,9 +63,9 @@ class TestThreads implements Runnable{
         Future future;
 
         if(thread.opsQueue.size() == 0){
-            return queue.dequeueToShared();
+            return queue.get().dequeueFromShared();
         }else{
-            future = queue.futureEnqueue(val);
+            future = queue.get().futureEnqueue(val);
             evaluate(future);
         }
         
@@ -75,7 +75,7 @@ class TestThreads implements Runnable{
     // FutureEnqueue enqueues a FutureOp object representing an enqueue operation
     // and returns A pointer to the Future object encapsulated in the created FutureOp will be
     // returned by the method, so that the caller could later pass it to the Evaluate method.
-    public Future futureEnqueue(T val){
+    public Future futureEnqueue(int val){
         FutureOp futureOp = new FutureOp(true, new Future(val, false));
 
         // Add in the local linked list code.
@@ -98,7 +98,7 @@ class TestThreads implements Runnable{
     }
 
     public void evaluate (Future future){
-        Node<T> oldHead;
+        Node<Integer> oldHead;
         NodeWithCount head;
 
         if (future.isDone){
@@ -107,15 +107,115 @@ class TestThreads implements Runnable{
         
         if(thread.numEnqs > 0){  
 
-            oldHead = executeBatch(thread.opsQueue);
-            queue.pairFutureWithResults(oldHead);
+            oldHead = queue.get().executeBatch(thread.opsQueue);
+            queue.get().pairFutureWithResults(oldHead);
 
         }else{
             head = executeDeqsBatch();
             pairDeqFuturesWithResults(head.node, head.count);
-        }
-        
+        }        
     }
+
+    /*
+        PairFuturesWithResults. PairFuturesWithResults receives the old head. 
+        It simulates the pending operations one by one according to their original order, 
+        which is recorded in the thread’s 
+        opsQueue. Namely, it simulates updates of the head and tail of the shared queue. 
+        This is done by advancing nextEnqNode (which represents the value of tail->next in 
+        the current moment of the simulation) on each enqueue, and by advancing currentHead on 
+        dequeues that occur when the queue in its current state is not empty. 
+        The simulation is run in order to set results for future objects related to the pending operations and mark them as done.
+
+    */
+
+    // public void pairFutureWithResults(Node<Integer> oldHeadNode){
+    //     Node<Integer> nextEnqNode;
+    //     Node<Integer> currentHead;
+    //     boolean noMoreSuccessfulDeqs = false;
+    //     FutureOp op;
+
+    //     nextEnqNode = thread.enqHead;
+    //     currentHead = oldHeadNode;
+
+    //     while (!thread.opsQueue.isEmpty()){
+    //         op = thread.opsQueue.remove();
+
+    //         // Check if operation is Enqueue
+    //         if(op.isEnqueue){
+    //             nextEnqNode = nextEnqNode.next;
+    //         }
+    //         // If dequeue operation
+    //         else{
+                
+    //             // if queue is empty
+    //             if(noMoreSuccessfulDeqs || currentHead.next == nextEnqNode){
+    //                 op.future.returnVal = null;
+    //             }
+
+    //             else{
+    //                 currentHead = currentHead.next;
+
+    //                 if(currentHead == thread.enqTail){
+    //                     noMoreSuccessfulDeqs = true;
+    //                 }
+
+    //                 op.future.returnVal = currentHead.val;
+    //             }
+
+    //         }   
+    //     }
+
+    //     op.future.isDone = true;
+
+    // }
+
+    /*
+        The ExecuteDeqsBatch method  rst as- sists a colliding ongoing batch operation if 
+        there is any (in Line 94). It then calculates the new head and the number of 
+        successful de- queues by traversing over the items to be dequeued in the loop in Line 
+        97. If there is at least one successful dequeue, the dequeues take e 
+        ect at once using a single CAS operation in Line 105. The CAS pushes the shared queue’s head success f 
+        ulDeqsNum nodes forward.
+    */
+
+    // public NodeWithCount executeDeqsBatch(){
+    //     NodeCountOrAnn oldHeadAndCnt;
+    //     NodeWithCount newHeadNode;
+    //     NodeWithCount headNextNode;
+    //     int successfullDeqsNum = 0;
+
+    //     while(true){
+    //         oldHeadAndCnt = queue.get().HelpAnnAndGetHead();
+    //         newHeadNode = oldHeadAndCnt.NodeWCount;
+    //         successfullDeqsNum = 0
+
+    //         // repeat threadData.deqsNum times:?
+
+    //         for (int i = 0; i < thread.numDeqs; i++){
+    //             headNextNode = newHeadNode.node;
+
+    //             if(headNextNode == null){
+    //                 break;
+    //             }
+
+    //             successfulDeqsNum++;
+    //             newHeadNode = headNextNode;
+    //         }
+
+    //         if(successfulDeqsNum == 0){
+    //             break;
+    //         }
+
+    //         if(queue.get().head.compareAndSet(oldHeadAndCnt, ))
+
+    //     }
+
+    //     return new NodeWithCount(oldHeadAndCnt.node, successfulDeqsNum);
+    // }
+
+
+
+
 
 
 

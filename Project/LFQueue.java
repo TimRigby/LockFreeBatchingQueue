@@ -36,24 +36,24 @@ class Node<T>
     }
 }
 
-class TestThreads implements Runnable{
+class TestThreads<T> implements Runnable{
     private final int id;
-    public AtomicReference<LFQueue<Integer>> queue;
+    public LFQueue<T> queue;
     public ThreadData thread;
     
     TestThreads(LFQueue<Integer> q, int threadId){
-        this.queue = new AtomicReference<>(q);
+        this.queue = new LFQueue<>();
         this.id = threadId;
         this.thread = new ThreadData();
     }
 
-    public void enqueue(int val){
+    public void enqueue(T val){
         Future future;
 
         if(thread.opsQueue.size() == 0){
-            queue.get().enqueueToShared(val);
+            queue.enqueueToShared(val);
         }else{
-            future = queue.get().futureEnqueue(val);
+            future = queue.futureEnqueue(new FutureOp(true, new Future(val)));
             evaluate(future);
         }
 
@@ -63,9 +63,9 @@ class TestThreads implements Runnable{
         Future future;
 
         if(thread.opsQueue.size() == 0){
-            return queue.get().dequeueFromShared();
+            return queue.dequeueFromShared();
         }else{
-            future = queue.get().futureEnqueue(val);
+            future = queue.futureEnqueue(val);
             evaluate(future);
         }
         
@@ -75,9 +75,8 @@ class TestThreads implements Runnable{
     // FutureEnqueue enqueues a FutureOp object representing an enqueue operation
     // and returns A pointer to the Future object encapsulated in the created FutureOp will be
     // returned by the method, so that the caller could later pass it to the Evaluate method.
-    public Future futureEnqueue(int val){
-        FutureOp futureOp = new FutureOp(true, new Future(val, false));
-
+    public Future futureEnqueue(FutureOp futureOp){
+        
         // Add in the local linked list code.
 
         thread.opsQueue.add(futureOp);
@@ -98,7 +97,7 @@ class TestThreads implements Runnable{
     }
 
     public void evaluate (Future future){
-        Node<Integer> oldHead;
+        Node<T> oldHead;
         NodeWithCount head;
 
         if (future.isDone){
@@ -107,8 +106,8 @@ class TestThreads implements Runnable{
         
         if(thread.numEnqs > 0){  
 
-            oldHead = queue.get().executeBatch(thread.opsQueue);
-            queue.get().pairFutureWithResults(oldHead);
+            oldHead = queue.executeBatch(new BatchRequest(thread));
+            queue.pairFutureWithResults(oldHead);
 
         }else{
             head = executeDeqsBatch();
@@ -128,9 +127,9 @@ class TestThreads implements Runnable{
 
     */
 
-    // public void pairFutureWithResults(Node<Integer> oldHeadNode){
-    //     Node<Integer> nextEnqNode;
-    //     Node<Integer> currentHead;
+    // public void pairFutureWithResults(Node<T> oldHeadNode){
+    //     Node<T> nextEnqNode;
+    //     Node<T> currentHead;
     //     boolean noMoreSuccessfulDeqs = false;
     //     FutureOp op;
 
@@ -239,6 +238,11 @@ class TestThreads implements Runnable{
 
 
 
+
+
+
+
+
     public void run(){
 
     }
@@ -326,10 +330,6 @@ public class LFQueue<T> {
         }
     }
 
-    public T dequeue()
-    {
-        return null;
-    }
 
     // FutureEnqueue enqueues a FutureOp object representing an enqueue operation
     // and returns A pointer to the Future object encapsulated in the created FutureOp will be
@@ -381,7 +381,7 @@ public class LFQueue<T> {
     // (5) Promoting SQTail to point to the last node enqueued by the batch operation (and increasing its enqueue count by the number of enqueues).
     // (6) Setting SQHead to point to the last node dequeued by the batch operation in place of ann (and increasing its dequeue count by the number of successful dequeues).
 
-    private Node<T> executeBatch(BatchRequest batch){
+    public Node<T> executeBatch(BatchRequest batch){
         NodeCountOrAnn ptr;
         // Creating a new announcement object and passing the batch request
         Announcement ann = new Announcement(batch);

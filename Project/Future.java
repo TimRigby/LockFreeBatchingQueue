@@ -4,4 +4,8 @@
 public class Future<T> {
     T returnVal;
     boolean isDone;
+
+    Future(T val){
+    	this.returnVal = val;
+    }
 }

@@ -9,4 +9,12 @@ public class BatchRequest<T>{
     int numEnqs;
     int numDeqs;
     int numExcessDeqs;
+
+    BatchRequest(ThreadData data){
+    	this.firstEnq = data.enqHead;
+    	this.lastEnq = data.enqTail;
+    	this.numEnqs = data.numEnqs;
+    	this.numDeqs = data.numDeqs;
+    	this.numExcessDeqs = data.numExcessDeqs;
+    }
 }

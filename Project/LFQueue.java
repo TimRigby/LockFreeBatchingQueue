@@ -213,10 +213,29 @@ class TestThreads implements Runnable{
     //     return new NodeWithCount(oldHeadAndCnt.node, successfulDeqsNum);
     // }
 
+    // PairDeqFuturesWithResults to pair the successfully-dequeued-items to futures of the appropriate operations 
+    // n opsQueue. The remaining future dequeues are unsuccessful, thus their results are set to NULL.
+
+    // public void pairDeqFuturesWithResults(NodeWithCount oldHeadNode, int successfulDeqsNum){
+    //     NodeWithCount currentHead;
+    //     FutureOp op;
+
+    //     currentHead = oldHeadNode;
 
 
+    //     for(int i = 0; i < successfulDeqsNum; i++){
+    //         currentHead = currentHead.node;
+    //         op = thread.opsQueue.remove();
+    //         op.future.returnVal = currentHead.node.val;
+    //         op.future.isDone = true;
+    //     }
 
-
+    //     for(int j = 0; j < (thread.numDeqs - successfulDeqsNum); j++){
+    //         op = thread.opsQueue.remove();
+    //         op.future.returnVal = null;
+    //         op.future.isDone = true;
+    //     }
+    // }
 
 
 

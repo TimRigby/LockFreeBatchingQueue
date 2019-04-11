@@ -65,19 +65,38 @@ class TestThreads<T> implements Runnable{
         if(thread.opsQueue.size() == 0){
             return queue.dequeueFromShared();
         }else{
-            future = queue.futureEnqueue(val);
+            future = queue.futureDequeue();
             evaluate(future);
         }
         
-        return future.returnVal;
+        return (T) future.returnVal;
     }
 
     // FutureEnqueue enqueues a FutureOp object representing an enqueue operation
     // and returns A pointer to the Future object encapsulated in the created FutureOp will be
     // returned by the method, so that the caller could later pass it to the Evaluate method.
     public Future futureEnqueue(FutureOp futureOp){
-        
+        // Get thread head/tail references for ease
+        Node<T> localHead, localTail;
+        localHead = (Node<T>) thread.enqHead.get();
+        localTail = (Node<T>) thread.enqTail.get();
+
         // Add in the local linked list code.
+        if (localHead == null)
+        {
+
+            thread.enqHead.compareAndSet(null, new Node<T>((T) futureOp.future.returnVal));
+            thread.enqTail.compareAndSet(null, thread.enqHead.get());
+        }
+        else
+        {
+            // QUESTION: Why did we move the futureop to input again?
+            localTail.next.compareAndSet(null, new Node<T>((T) futureOp.future.returnVal));
+            //thread.enqTail.next = new LocalNode<T>((T) futureOp.future.returnVal);
+
+            thread.enqTail.compareAndSet(localTail, localTail.next.get());
+            //thread.enqTail = thread.enqTail.next;
+        }
 
         thread.opsQueue.add(futureOp);
         thread.numEnqs++;
@@ -86,12 +105,23 @@ class TestThreads<T> implements Runnable{
     }
 
     public Future futureDequeue(){
-        FutureOp futureOp = new FutureOp(false, new Future(val, false));
+        FutureOp futureOp = new FutureOp(false, new Future(null));
 
         thread.opsQueue.add(futureOp);
         thread.numDeqs++;
 
         // Add in the excess dequeue algorithm.
+        // If there are no enqueues for this deq to match with, this is an excess dequeue
+        if (thread.unusedEnqs == 0)
+        {
+            thread.numExcessDeqs++;
+        }
+
+        // Otherwise if an unpaired enqueue exists, mark is as paired
+        else
+        {
+            thread.unusedEnqs--;
+        }
 
         return futureOp.future;
     }
@@ -106,12 +136,12 @@ class TestThreads<T> implements Runnable{
         
         if(thread.numEnqs > 0){  
 
-            oldHead = queue.executeBatch(new BatchRequest(thread));
-            queue.pairFutureWithResults(oldHead);
+            //oldHead = queue.executeBatch(new BatchRequest(thread));
+            //queue.pairFutureWithResults(oldHead);
 
         }else{
-            head = executeDeqsBatch();
-            pairDeqFuturesWithResults(head.node, head.count);
+            //head = executeDeqsBatch();
+            //pairDeqFuturesWithResults(head.node, head.count);
         }        
     }
 

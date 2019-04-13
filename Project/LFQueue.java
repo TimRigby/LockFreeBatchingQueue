@@ -40,7 +40,7 @@ class TestThreads<T> implements Runnable{
     private final int id;
     public LFQueue<T> queue;
     public ThreadData thread;
-    
+
     TestThreads(LFQueue<Integer> q, int threadId){
         this.queue = new LFQueue<>();
         this.id = threadId;
@@ -68,7 +68,7 @@ class TestThreads<T> implements Runnable{
             future = queue.futureDequeue();
             evaluate(future);
         }
-        
+
         return (T) future.returnVal;
     }
 
@@ -133,145 +133,140 @@ class TestThreads<T> implements Runnable{
         if (future.isDone){
             return;
         }
-        
-        if(thread.numEnqs > 0){  
 
-            //oldHead = queue.executeBatch(new BatchRequest(thread));
-            //queue.pairFutureWithResults(oldHead);
+        if(thread.numEnqs > 0){
+
+            oldHead = queue.executeBatch(new BatchRequest(thread));
+            pairFutureWithResults(oldHead);
 
         }else{
-            //head = executeDeqsBatch();
-            //pairDeqFuturesWithResults(head.node, head.count);
-        }        
+            NodeWithCount deqBatchHead = executeDeqsBatch();
+            pairDeqFuturesWithResults(deqBatchHead.node, deqBatchHead.count);
+        }
     }
 
     /*
-        PairFuturesWithResults. PairFuturesWithResults receives the old head. 
-        It simulates the pending operations one by one according to their original order, 
-        which is recorded in the thread’s 
-        opsQueue. Namely, it simulates updates of the head and tail of the shared queue. 
-        This is done by advancing nextEnqNode (which represents the value of tail->next in 
-        the current moment of the simulation) on each enqueue, and by advancing currentHead on 
-        dequeues that occur when the queue in its current state is not empty. 
+        PairFuturesWithResults. PairFuturesWithResults receives the old head.
+        It simulates the pending operations one by one according to their original order,
+        which is recorded in the thread’s
+        opsQueue. Namely, it simulates updates of the head and tail of the shared queue.
+        This is done by advancing nextEnqNode (which represents the value of tail->next in
+        the current moment of the simulation) on each enqueue, and by advancing currentHead on
+        dequeues that occur when the queue in its current state is not empty.
         The simulation is run in order to set results for future objects related to the pending operations and mark them as done.
-
     */
 
-    // public void pairFutureWithResults(Node<T> oldHeadNode){
-    //     Node<T> nextEnqNode;
-    //     Node<T> currentHead;
-    //     boolean noMoreSuccessfulDeqs = false;
-    //     FutureOp op;
 
-    //     nextEnqNode = thread.enqHead;
-    //     currentHead = oldHeadNode;
+    public void pairFutureWithResults(Node<T> oldHeadNode){
+        Node<T> nextEnqNode;
+        Node<T> currentHead;
+        boolean noMoreSuccessfulDeqs = false;
+        FutureOp op;
 
-    //     while (!thread.opsQueue.isEmpty()){
-    //         op = thread.opsQueue.remove();
+        nextEnqNode = (Node<T>) thread.enqHead.get();
+        currentHead = oldHeadNode;
 
-    //         // Check if operation is Enqueue
-    //         if(op.isEnqueue){
-    //             nextEnqNode = nextEnqNode.next;
-    //         }
-    //         // If dequeue operation
-    //         else{
-                
-    //             // if queue is empty
-    //             if(noMoreSuccessfulDeqs || currentHead.next == nextEnqNode){
-    //                 op.future.returnVal = null;
-    //             }
+        while (!thread.opsQueue.isEmpty()){
+            op = (FutureOp) thread.opsQueue.remove();
 
-    //             else{
-    //                 currentHead = currentHead.next;
+            // Check if operation is Enqueue
+            if(op.isEnqueue){
+                nextEnqNode = (Node<T>) nextEnqNode.next.get();
+            }
+            // If dequeue operation
+            else{
 
-    //                 if(currentHead == thread.enqTail){
-    //                     noMoreSuccessfulDeqs = true;
-    //                 }
+                // if queue is empty
+                if(noMoreSuccessfulDeqs || (Node<T>) currentHead.next.get() == nextEnqNode){
+                    op.future.returnVal = null;
+                }
 
-    //                 op.future.returnVal = currentHead.val;
-    //             }
+                else{
+                    currentHead = (Node<T>) currentHead.next.get();
 
-    //         }   
-    //     }
+                    if(currentHead == (Node<T>) thread.enqTail.get()){
+                        noMoreSuccessfulDeqs = true;
+                    }
 
-    //     op.future.isDone = true;
+                    op.future.returnVal = currentHead.val;
+                }
 
-    // }
+            }
+            op.future.isDone = true;
+        }
+
+
+
+    }
 
     /*
-        The ExecuteDeqsBatch method  rst as- sists a colliding ongoing batch operation if 
-        there is any (in Line 94). It then calculates the new head and the number of 
-        successful de- queues by traversing over the items to be dequeued in the loop in Line 
-        97. If there is at least one successful dequeue, the dequeues take e 
-        ect at once using a single CAS operation in Line 105. The CAS pushes the shared queue’s head success f 
+        The ExecuteDeqsBatch method  rst as- sists a colliding ongoing batch operation if
+        there is any (in Line 94). It then calculates the new head and the number of
+        successful de- queues by traversing over the items to be dequeued in the loop in Line
+        97. If there is at least one successful dequeue, the dequeues take e
+        ect at once using a single CAS operation in Line 105. The CAS pushes the shared queue’s head success f
         ulDeqsNum nodes forward.
     */
 
-    // public NodeWithCount executeDeqsBatch(){
-    //     NodeCountOrAnn oldHeadAndCnt;
-    //     NodeWithCount newHeadNode;
-    //     NodeWithCount headNextNode;
-    //     int successfullDeqsNum = 0;
+    public NodeWithCount executeDeqsBatch(){
+        NodeCountOrAnn oldHeadAndCnt;
+        NodeWithCount newHeadNode;
+        NodeWithCount headNextNode;
+        int successfulDeqsNum = 0;
 
-    //     while(true){
-    //         oldHeadAndCnt = queue.get().HelpAnnAndGetHead();
-    //         newHeadNode = oldHeadAndCnt.NodeWCount;
-    //         successfullDeqsNum = 0
+        while(true){
+            oldHeadAndCnt = queue.helpAnnAndGetHead();
+            newHeadNode = oldHeadAndCnt.nodeWCount;
+            successfulDeqsNum = 0;
 
-    //         // repeat threadData.deqsNum times:?
+            // repeat threadData.deqsNum times:?
 
-    //         for (int i = 0; i < thread.numDeqs; i++){
-    //             headNextNode = newHeadNode.node;
+            for (int i = 0; i < thread.numDeqs; i++){
+                headNextNode = (NodeWithCount) newHeadNode.node.next.get();
 
-    //             if(headNextNode == null){
-    //                 break;
-    //             }
+                if(headNextNode == null){
+                    break;
+                }
 
-    //             successfulDeqsNum++;
-    //             newHeadNode = headNextNode;
-    //         }
+                successfulDeqsNum++;
+                newHeadNode = headNextNode;
+            }
 
-    //         if(successfulDeqsNum == 0){
-    //             break;
-    //         }
+            if(successfulDeqsNum == 0){
+                break;
+            }
 
-    //         if(queue.get().head.compareAndSet(oldHeadAndCnt, ))
+            if(queue.head.compareAndSet(oldHeadAndCnt, new NodeCountOrAnn(null, new NodeWithCount(newHeadNode.node, newHeadNode.count + successfulDeqsNum), false)))
+                break;
 
-    //     }
+        }
 
-    //     return new NodeWithCount(oldHeadAndCnt.node, successfulDeqsNum);
-    // }
+        return new NodeWithCount(oldHeadAndCnt.nodeWCount, successfulDeqsNum);
+    }
 
-    // PairDeqFuturesWithResults to pair the successfully-dequeued-items to futures of the appropriate operations 
+    // PairDeqFuturesWithResults to pair the successfully-dequeued-items to futures of the appropriate operations
     // n opsQueue. The remaining future dequeues are unsuccessful, thus their results are set to NULL.
 
-    // public void pairDeqFuturesWithResults(NodeWithCount oldHeadNode, int successfulDeqsNum){
-    //     NodeWithCount currentHead;
-    //     FutureOp op;
+    public void pairDeqFuturesWithResults(Node<T> oldHeadNode, int successfulDeqsNum){
+        Node<T> currentHead;
+        FutureOp op;
 
-    //     currentHead = oldHeadNode;
-
-
-    //     for(int i = 0; i < successfulDeqsNum; i++){
-    //         currentHead = currentHead.node;
-    //         op = thread.opsQueue.remove();
-    //         op.future.returnVal = currentHead.node.val;
-    //         op.future.isDone = true;
-    //     }
-
-    //     for(int j = 0; j < (thread.numDeqs - successfulDeqsNum); j++){
-    //         op = thread.opsQueue.remove();
-    //         op.future.returnVal = null;
-    //         op.future.isDone = true;
-    //     }
-    // }
+        currentHead = oldHeadNode;
 
 
+        for(int i = 0; i < successfulDeqsNum; i++){
+            currentHead = (Node<T>) currentHead.next.get();
+            op = (FutureOp) thread.opsQueue.remove();
+            op.future.returnVal = currentHead.val;
+            op.future.isDone = true;
+        }
 
-
-
-
-
+        for(int j = 0; j < (thread.numDeqs - successfulDeqsNum); j++){
+            op = (FutureOp) thread.opsQueue.remove();
+            op.future.returnVal = null;
+            op.future.isDone = true;
+        }
+    }
 
     public void run(){
 
@@ -282,8 +277,8 @@ class TestThreads<T> implements Runnable{
 
 public class LFQueue<T> {
     // The queue will contain atomic references for both the head and the tail of the queue, enabling atomic setting
-    private AtomicReference<NodeCountOrAnn> head;
-    private AtomicReference<NodeWithCount> tail;
+    public AtomicReference<NodeCountOrAnn> head;
+    public  AtomicReference<NodeWithCount> tail;
 
 
     // Constructor for the Queue
@@ -356,7 +351,7 @@ public class LFQueue<T> {
             // Otherwise try and update the shared queue's head reference. Need to update the NodeWithCount component of
             // the head with a new NodeWithCount and the updated size
             if (head.compareAndSet(curHead, new NodeCountOrAnn(null, new NodeWithCount(headNextNode, curHead.nodeWCount.count - 1), false)))
-            return headNextNode.val;
+                return headNextNode.val;
         }
     }
 
@@ -383,7 +378,7 @@ public class LFQueue<T> {
     // HelpAnnAndGetHead. This auxiliary method assists announcements in execution,
     // as long as there is an announcement installed in SQHead.
 
-    private NodeCountOrAnn helpAnnAndGetHead(){
+    public NodeCountOrAnn helpAnnAndGetHead(){
         NodeCountOrAnn head;
 
         while (true){
@@ -509,8 +504,8 @@ public class LFQueue<T> {
             newHeadNode = getNthNode(ann.announcement.oldTail.node, successfulDeqsNum);
         }
 
-        head.compareAndSet(ann, new NodeCountOrAnn(null, new NodeWithCount(newHeadNode, ann.announcement.oldHead.count 
-                            + successfulDeqsNum), false));
+        head.compareAndSet(ann, new NodeCountOrAnn(null, new NodeWithCount(newHeadNode, ann.announcement.oldHead.count
+                + successfulDeqsNum), false));
 
     }
 

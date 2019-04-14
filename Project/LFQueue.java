@@ -41,8 +41,8 @@ class TestThreads<T> implements Runnable{
     public LFQueue<T> queue;
     public ThreadData thread;
 
-    TestThreads(LFQueue<Integer> q, int threadId){
-        this.queue = new LFQueue<>();
+    TestThreads(LFQueue<T> q, int threadId){
+        this.queue = q;
         this.id = threadId;
         this.thread = new ThreadData();
     }

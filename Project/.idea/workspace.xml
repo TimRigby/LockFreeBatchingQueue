@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="16f0fa19-d67f-4d81-9827-3d5543f4fc4d" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LFQueue.class" beforeDir="false" afterPath="$PROJECT_DIR$/LFQueue.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/LFQueue.java" beforeDir="false" afterPath="$PROJECT_DIR$/LFQueue.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TestThreads.class" beforeDir="false" afterPath="$PROJECT_DIR$/TestThreads.class" afterDir="false" />
     </list>
@@ -18,8 +17,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/LFQueue.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="323">
-              <caret line="516" column="20" lean-forward="true" selection-start-line="516" selection-start-column="20" selection-end-line="516" selection-end-column="20" />
+            <state relative-caret-position="385">
+              <caret line="50" column="22" lean-forward="true" selection-start-line="50" selection-start-column="22" selection-end-line="50" selection-end-column="22" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -109,11 +108,11 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-1448" />
-    <option name="y" value="-146" />
-    <option name="width" value="1456" />
-    <option name="height" value="916" />
+  <component name="ProjectFrameBounds">
+    <option name="x" value="218" />
+    <option name="y" value="56" />
+    <option name="width" value="1545" />
+    <option name="height" value="1103" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -121,6 +120,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -133,7 +133,6 @@
         </subPane>
       </pane>
       <pane id="PackagesPane" />
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -175,17 +174,18 @@
       <workItem from="1554948424048" duration="4844000" />
       <workItem from="1555031726477" duration="120000" />
       <workItem from="1555169111859" duration="31000" />
+      <workItem from="1555251364480" duration="505000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="18972000" />
+    <option name="totallyTimeSpent" value="19477000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-1448" y="-146" width="1456" height="916" extended-state="6" />
+    <frame x="175" y="45" width="1236" height="882" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.04992764" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.06432247" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Image Layers" order="2" />
       <window_info id="Designer" order="3" />
@@ -202,7 +202,7 @@
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Version Control" order="8" />
       <window_info anchor="bottom" id="Database Changes" order="9" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="10" visible="true" weight="0.24834874" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="10" visible="true" weight="0.24655648" />
       <window_info anchor="bottom" id="Event Log" order="11" side_tool="true" />
       <window_info anchor="bottom" id="Messages" order="12" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
@@ -255,8 +255,8 @@
     <entry file="file://$PROJECT_DIR$/LocalNode.java" />
     <entry file="file://$PROJECT_DIR$/LFQueue.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="323">
-          <caret line="516" column="20" lean-forward="true" selection-start-line="516" selection-start-column="20" selection-end-line="516" selection-end-column="20" />
+        <state relative-caret-position="385">
+          <caret line="50" column="22" lean-forward="true" selection-start-line="50" selection-start-column="22" selection-end-line="50" selection-end-column="22" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>

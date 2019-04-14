@@ -36,18 +36,18 @@ class Node<T>
     }
 }
 
-class TestThreads<T> implements Runnable{
+class TestThreads implements Runnable{
     private final int id;
-    public LFQueue<T> queue;
+    public LFQueue queue;
     public ThreadData thread;
 
-    TestThreads(LFQueue<T> q, int threadId){
+    TestThreads(LFQueue<Integer> q, int threadId){
         this.queue = q;
         this.id = threadId;
         this.thread = new ThreadData();
     }
 
-    public void enqueue(T val){
+    public void enqueue(int val){
         Future future;
 
         if(thread.opsQueue.size() == 0){
@@ -59,17 +59,20 @@ class TestThreads<T> implements Runnable{
 
     }
 
-    public T dequeue(){
+    public Integer dequeue(){
         Future future;
 
+        //System.out.println("In dequeue");
+        //System.out.println("Thread queue " + thread.opsQueue.size());
+
         if(thread.opsQueue.size() == 0){
-            return queue.dequeueFromShared();
+            return (Integer)queue.dequeueFromShared();
         }else{
             future = queue.futureDequeue();
             evaluate(future);
         }
 
-        return (T) future.returnVal;
+        return (Integer) future.returnVal;
     }
 
     // FutureEnqueue enqueues a FutureOp object representing an enqueue operation
@@ -77,21 +80,21 @@ class TestThreads<T> implements Runnable{
     // returned by the method, so that the caller could later pass it to the Evaluate method.
     public Future futureEnqueue(FutureOp futureOp){
         // Get thread head/tail references for ease
-        Node<T> localHead, localTail;
-        localHead = (Node<T>) thread.enqHead.get();
-        localTail = (Node<T>) thread.enqTail.get();
+        Node<Integer> localHead, localTail;
+        localHead = (Node<Integer>) thread.enqHead.get();
+        localTail = (Node<Integer>) thread.enqTail.get();
 
         // Add in the local linked list code.
         if (localHead == null)
         {
 
-            thread.enqHead.compareAndSet(null, new Node<T>((T) futureOp.future.returnVal));
+            thread.enqHead.compareAndSet(null, new Node<Integer>((Integer) futureOp.future.returnVal));
             thread.enqTail.compareAndSet(null, thread.enqHead.get());
         }
         else
         {
             // QUESTION: Why did we move the futureop to input again?
-            localTail.next.compareAndSet(null, new Node<T>((T) futureOp.future.returnVal));
+            localTail.next.compareAndSet(null, new Node<Integer>((Integer) futureOp.future.returnVal));
             //thread.enqTail.next = new LocalNode<T>((T) futureOp.future.returnVal);
 
             thread.enqTail.compareAndSet(localTail, localTail.next.get());
@@ -127,7 +130,7 @@ class TestThreads<T> implements Runnable{
     }
 
     public void evaluate (Future future){
-        Node<T> oldHead;
+        Node<Integer> oldHead;
         NodeWithCount head;
 
         if (future.isDone){
@@ -135,14 +138,21 @@ class TestThreads<T> implements Runnable{
         }
 
         if(thread.numEnqs > 0){
+        	System.out.println("In if");
 
             oldHead = queue.executeBatch(new BatchRequest(thread));
             pairFutureWithResults(oldHead);
 
         }else{
+        	System.out.println("In else");
             NodeWithCount deqBatchHead = executeDeqsBatch();
             pairDeqFuturesWithResults(deqBatchHead.node, deqBatchHead.count);
         }
+
+        thread.numEnqs = 0;
+        thread.numDeqs = 0;
+        thread.numExcessDeqs = 0;
+        thread.unusedEnqs = 0;
     }
 
     /*
@@ -157,34 +167,35 @@ class TestThreads<T> implements Runnable{
     */
 
 
-    public void pairFutureWithResults(Node<T> oldHeadNode){
-        Node<T> nextEnqNode;
-        Node<T> currentHead;
+    public void pairFutureWithResults(Node<Integer> oldHeadNode){
+        Node<Integer> nextEnqNode;
+        Node<Integer> currentHead;
         boolean noMoreSuccessfulDeqs = false;
         FutureOp op;
 
-        nextEnqNode = (Node<T>) thread.enqHead.get();
+        nextEnqNode = (Node<Integer>) thread.enqHead.get();
         currentHead = oldHeadNode;
 
         while (!thread.opsQueue.isEmpty()){
+        	//System.out.println("In Loop pairFutureWithResults");
             op = (FutureOp) thread.opsQueue.remove();
 
             // Check if operation is Enqueue
             if(op.isEnqueue){
-                nextEnqNode = (Node<T>) nextEnqNode.next.get();
+                nextEnqNode = (Node<Integer>) nextEnqNode.next.get();
             }
             // If dequeue operation
             else{
 
                 // if queue is empty
-                if(noMoreSuccessfulDeqs || (Node<T>) currentHead.next.get() == nextEnqNode){
+                if(noMoreSuccessfulDeqs || (Node<Integer>) currentHead.next.get() == nextEnqNode){
                     op.future.returnVal = null;
                 }
 
                 else{
-                    currentHead = (Node<T>) currentHead.next.get();
+                    currentHead = (Node<Integer>) currentHead.next.get();
 
-                    if(currentHead == (Node<T>) thread.enqTail.get()){
+                    if(currentHead == (Node<Integer>) thread.enqTail.get()){
                         noMoreSuccessfulDeqs = true;
                     }
 
@@ -195,7 +206,7 @@ class TestThreads<T> implements Runnable{
             op.future.isDone = true;
         }
 
-
+        //System.out.println("Leaving pairFutureWithResults");
 
     }
 
@@ -210,25 +221,31 @@ class TestThreads<T> implements Runnable{
 
     public NodeWithCount executeDeqsBatch(){
         NodeCountOrAnn oldHeadAndCnt;
-        NodeWithCount newHeadNode;
-        NodeWithCount headNextNode;
+        Node<Integer> newHeadNode;
+        Node<Integer> headNextNode;
+        int tempcount;
+        NodeWithCount baseNewHead;
         int successfulDeqsNum = 0;
 
         while(true){
             oldHeadAndCnt = queue.helpAnnAndGetHead();
-            newHeadNode = oldHeadAndCnt.nodeWCount;
+            baseNewHead = oldHeadAndCnt.nodeWCount;
+            tempcount = baseNewHead.count;
+            System.out.println("tempCount = " + tempcount);
+            newHeadNode = baseNewHead.node;
             successfulDeqsNum = 0;
 
             // repeat threadData.deqsNum times:?
 
             for (int i = 0; i < thread.numDeqs; i++){
-                headNextNode = (NodeWithCount) newHeadNode.node.next.get();
+                headNextNode = (Node<Integer>) newHeadNode.next.get();
 
                 if(headNextNode == null){
                     break;
                 }
 
                 successfulDeqsNum++;
+                tempcount++;
                 newHeadNode = headNextNode;
             }
 
@@ -236,7 +253,7 @@ class TestThreads<T> implements Runnable{
                 break;
             }
 
-            if(queue.head.compareAndSet(oldHeadAndCnt, new NodeCountOrAnn(null, new NodeWithCount(newHeadNode.node, newHeadNode.count + successfulDeqsNum), false)))
+            if(queue.head.compareAndSet(oldHeadAndCnt, new NodeCountOrAnn(null, new NodeWithCount(newHeadNode, tempcount), false)))
                 break;
 
         }
@@ -247,16 +264,18 @@ class TestThreads<T> implements Runnable{
     // PairDeqFuturesWithResults to pair the successfully-dequeued-items to futures of the appropriate operations
     // n opsQueue. The remaining future dequeues are unsuccessful, thus their results are set to NULL.
 
-    public void pairDeqFuturesWithResults(Node<T> oldHeadNode, int successfulDeqsNum){
-        Node<T> currentHead;
+    public void pairDeqFuturesWithResults(Node<Integer> oldHeadNode, int successfulDeqsNum){
+        Node<Integer> currentHead;
         FutureOp op;
 
         currentHead = oldHeadNode;
 
 
         for(int i = 0; i < successfulDeqsNum; i++){
-            currentHead = (Node<T>) currentHead.next.get();
+            currentHead = (Node<Integer>) currentHead.next.get();
             op = (FutureOp) thread.opsQueue.remove();
+            System.out.println("Future = " + op.future);
+            System.out.println("currHead Val = " + currentHead);
             op.future.returnVal = currentHead.val;
             op.future.isDone = true;
         }
@@ -269,7 +288,19 @@ class TestThreads<T> implements Runnable{
     }
 
     public void run(){
+    	Future d = null;
 
+    	for(int i = 0; i < 10; i++){
+    		Future f = new Future(i);
+    		d = futureEnqueue(new FutureOp(true, f));
+    	}
+    	evaluate(d);
+
+    	Future f = new Future(11);
+    	//d = futureEnqueue(new FutureOp(true, f));
+    	d = futureDequeue();
+
+    	evaluate(d);
     }
 
 
@@ -285,7 +316,7 @@ public class LFQueue<T> {
     public LFQueue()
     {
         // Instantiate the head and tail with a dummy node
-        NodeWithCount dummy = new NodeWithCount(null, 0);
+        NodeWithCount dummy = new NodeWithCount(new Node<Integer>(0), 0);
 
         head = new AtomicReference<NodeCountOrAnn>(new NodeCountOrAnn(null, dummy, false));
         tail = new AtomicReference<NodeWithCount>(dummy);
@@ -299,6 +330,7 @@ public class LFQueue<T> {
 
         while (true)
         {
+        	//System.out.println("In Loop enqueueToShared");
             // Get the current queue tail
             NodeWithCount tailCount = tail.get();
 
@@ -321,7 +353,7 @@ public class LFQueue<T> {
                 /*
                 ~~~~~~~~~~~~~~~~ Implement executeAnn()
                  */
-                //executeAnn(curHead.announcement);
+                executeAnnouncement(curHead);
             }
 
             // If appending a node to the queue fails and the head isn't an announcement, try and help update the tail
@@ -336,6 +368,7 @@ public class LFQueue<T> {
     {
         while (true)
         {
+        	//System.out.println("In dequeued to shared");
             // Get the head reference via helper function
             NodeCountOrAnn curHead = helpAnnAndGetHead();
 
@@ -382,6 +415,7 @@ public class LFQueue<T> {
         NodeCountOrAnn head;
 
         while (true){
+        	//System.out.println("In HelpAnnAndGetHead");
 
             // Getting the current head
             head = this.head.get();
@@ -394,7 +428,7 @@ public class LFQueue<T> {
                    /*
                 ~~~~~~~~~~~~~~~~ Implement executeAnn()
                  */
-            //ExecuteAnn(head.announcement);
+            executeAnnouncement(head);
         }
     }
 
@@ -413,17 +447,13 @@ public class LFQueue<T> {
         NodeCountOrAnn newHead;
 
         while (true){
+        	//System.out.println("In Loop ExecuteBatch");
             // Checking if there is a coliding ongoing batch whose announcement
             // is installed in the SQHead.
             ptr = helpAnnAndGetHead();
 
-            // Set the PtrCnt object returned to oldHead;
-            /*
-            ~~~~~~~~~~~~~ Implement Announcement.setOldHead function
-             */
-            //ann.setOldHead(ptr.nodeWCount);
+            ann.oldHead = ptr.nodeWCount;
 
-            // Step 2: Installing ann in SQHead
             newHead = new NodeCountOrAnn(ann, null, true);
             if(head.compareAndSet(ptr, newHead)){
                 break;
@@ -436,20 +466,21 @@ public class LFQueue<T> {
         return ptr.nodeWCount.node;
     }
 
-    private void executeAnnouncement(NodeCountOrAnn annHead)
+    public void executeAnnouncement(NodeCountOrAnn annHead)
     {
         NodeWithCount tailAndCnt, annOldTail;
 
         // Link items to tail and update the announcement
         while(true)
-        {
+        {	
+        	
             tailAndCnt = tail.get();
             annOldTail = annHead.announcement.oldTail;
 
             // The old tail of the announcement is initially null and is only set to a value when a thread has
             // successfully linked the new batch list to the end of the shared queue before the batch was applied
             // So if a value is here, the batch has been applied
-            if (annOldTail.node != null)
+            if (annOldTail != null && annOldTail.node != null)
             {
                 break;
             }
@@ -458,6 +489,7 @@ public class LFQueue<T> {
             tailAndCnt.node.next.compareAndSet(null, annHead.announcement.batchToApply.firstEnq);
 
             // If the CAS was successful, store the previous tail in the announcement
+
             if (tailAndCnt.node.next.get() == annHead.announcement.batchToApply.firstEnq)
             {
                 annOldTail = tailAndCnt;
@@ -474,7 +506,7 @@ public class LFQueue<T> {
         // Create the new tail which will hold the last node enqueued by the batch and increase the size by the number of enqueues
         NodeWithCount newTailAndCnt = new NodeWithCount(annHead.announcement.batchToApply.lastEnq, annOldTail.count + annHead.announcement.batchToApply.numEnqs);
         tail.compareAndSet(annOldTail, newTailAndCnt);
-        //UpdateHead(annHead);
+        updateHead(annHead);
     }
 
     /*
@@ -517,9 +549,34 @@ public class LFQueue<T> {
         return node;
     }
 
-    public static void main (String[] args){
+    public static void main (String[] args) throws Exception{
+    	int THREAD_NUMBER = 1;
+	
+		Thread threads[] = new Thread[THREAD_NUMBER];
+		LFQueue<Integer> queue = new LFQueue<>();
 
-    }
+		long start = System.currentTimeMillis();
+
+		for(int i = 0; i < THREAD_NUMBER; i++){
+			threads[i] = new Thread(new TestThreads(queue, i));
+			threads[i].start();
+		}
+
+		for(int i = 0; i < THREAD_NUMBER; i++){
+			threads[i].join();
+		}
+
+		long stop = System.currentTimeMillis();
+
+		System.out.println("\nRuntime: " + (stop - start) + "ms.");
+		Node<Integer> temp = queue.head.get().nodeWCount.node;
+
+		// while(temp.next.get() != null){
+		// 	System.out.println(temp.val);
+		// 	temp = (Node<Integer>)temp.next.get();
+		// }
+
+	}
 
 
 }

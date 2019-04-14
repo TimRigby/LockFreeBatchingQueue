@@ -9,5 +9,8 @@ public class Announcement {
     Announcement(BatchRequest batch)
     {
         this.batchToApply = batch;
+        
     }
+
+
 }

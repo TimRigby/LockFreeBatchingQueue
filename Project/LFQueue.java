@@ -258,7 +258,7 @@ class TestThreads implements Runnable{
 
         }
 
-        return new NodeWithCount(oldHeadAndCnt.nodeWCount, successfulDeqsNum);
+        return new NodeWithCount(oldHeadAndCnt.nodeWCount.node, successfulDeqsNum);
     }
 
     // PairDeqFuturesWithResults to pair the successfully-dequeued-items to futures of the appropriate operations
@@ -267,15 +267,12 @@ class TestThreads implements Runnable{
     public void pairDeqFuturesWithResults(Node<Integer> oldHeadNode, int successfulDeqsNum){
         Node<Integer> currentHead;
         FutureOp op;
-
         currentHead = oldHeadNode;
-
 
         for(int i = 0; i < successfulDeqsNum; i++){
             currentHead = (Node<Integer>) currentHead.next.get();
             op = (FutureOp) thread.opsQueue.remove();
-            System.out.println("Future = " + op.future);
-            System.out.println("currHead Val = " + currentHead);
+
             op.future.returnVal = currentHead.val;
             op.future.isDone = true;
         }

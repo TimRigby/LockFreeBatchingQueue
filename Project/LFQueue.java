@@ -138,13 +138,12 @@ class TestThreads implements Runnable{
         }
 
         if(thread.numEnqs > 0){
-        	System.out.println("In if");
 
             oldHead = queue.executeBatch(new BatchRequest(thread));
+                    System.out.println("oldHead = " + oldHead);
             pairFutureWithResults(oldHead);
 
         }else{
-        	System.out.println("In else");
             NodeWithCount deqBatchHead = executeDeqsBatch();
             pairDeqFuturesWithResults(deqBatchHead.node, deqBatchHead.count);
         }
@@ -183,11 +182,11 @@ class TestThreads implements Runnable{
             // Check if operation is Enqueue
             if(op.isEnqueue){
                 nextEnqNode = (Node<Integer>) nextEnqNode.next.get();
+                System.out.println("nextEnqNode = " + nextEnqNode);
             }
             // If dequeue operation
             else{
 
-                // if queue is empty
                 if(noMoreSuccessfulDeqs || (Node<Integer>) currentHead.next.get() == nextEnqNode){
                     op.future.returnVal = null;
                 }
@@ -231,7 +230,6 @@ class TestThreads implements Runnable{
             oldHeadAndCnt = queue.helpAnnAndGetHead();
             baseNewHead = oldHeadAndCnt.nodeWCount;
             tempcount = baseNewHead.count;
-            System.out.println("tempCount = " + tempcount);
             newHeadNode = baseNewHead.node;
             successfulDeqsNum = 0;
 
@@ -286,18 +284,48 @@ class TestThreads implements Runnable{
 
     public void run(){
     	Future d = null;
+    	AtomicInteger numOps = new AtomicInteger(0);
+    	Random rand = new Random();
+    	int count = 0;
+    	int op;
+    	int enq;
 
-    	for(int i = 0; i < 10; i++){
-    		Future f = new Future(i);
-    		d = futureEnqueue(new FutureOp(true, f));
+
+    	while(numOps.get() < 100){
+
+    		if(count == 4){
+    			FutureOp a = (FutureOp) thread.opsQueue.remove();
+    			FutureOp b = (FutureOp)thread.opsQueue.remove();
+    			FutureOp c = (FutureOp)thread.opsQueue.remove();
+    			FutureOp e = (FutureOp)thread.opsQueue.remove();
+
+    			System.out.println("Is enqueue = " + a.isEnqueue);
+    			System.out.println("Is enqueue = " + b.isEnqueue);
+    			System.out.println("Is enqueue = " + c.isEnqueue);
+    			System.out.println("Is enqueue = " + e.isEnqueue);
+
+    			thread.opsQueue.add(a);
+    			thread.opsQueue.add(b);
+    			thread.opsQueue.add(c);
+    			thread.opsQueue.add(e);
+    			evaluate(d);
+    			count = 0;
+    		}
+
+    		op = rand.nextInt(2);
+
+    		if(op == 0){
+    			enq = rand.nextInt(100);
+    			d = futureEnqueue(new FutureOp(true, new Future(enq)));
+    		}
+
+    		if(op == 1){
+    			d = futureDequeue();    		
+    		}
+
+    		numOps.getAndIncrement();
+    		count++;
     	}
-    	evaluate(d);
-
-    	Future f = new Future(11);
-    	//d = futureEnqueue(new FutureOp(true, f));
-    	d = futureDequeue();
-
-    	evaluate(d);
     }
 
 
@@ -380,7 +408,7 @@ public class LFQueue<T> {
 
             // Otherwise try and update the shared queue's head reference. Need to update the NodeWithCount component of
             // the head with a new NodeWithCount and the updated size
-            if (head.compareAndSet(curHead, new NodeCountOrAnn(null, new NodeWithCount(headNextNode, curHead.nodeWCount.count - 1), false)))
+            if (head.compareAndSet(curHead, new NodeCountOrAnn(null, new NodeWithCount(headNextNode, curHead.nodeWCount.count + 1), false)))
                 return headNextNode.val;
         }
     }
@@ -416,6 +444,7 @@ public class LFQueue<T> {
 
             // Getting the current head
             head = this.head.get();
+            System.out.println("head = " + head.nodeWCount.node);
 
             // Need to see how this translates to java since we don;t have the union struct.
             if(!head.isAnnouncement){
@@ -450,6 +479,7 @@ public class LFQueue<T> {
             ptr = helpAnnAndGetHead();
 
             ann.oldHead = ptr.nodeWCount;
+            System.out.println("Node = " + ptr.nodeWCount.node);
 
             newHead = new NodeCountOrAnn(ann, null, true);
             if(head.compareAndSet(ptr, newHead)){
@@ -488,7 +518,8 @@ public class LFQueue<T> {
             // If the CAS was successful, store the previous tail in the announcement
 
             if (tailAndCnt.node.next.get() == annHead.announcement.batchToApply.firstEnq)
-            {
+            {   
+                System.out.println("Made it in!");
                 annOldTail = tailAndCnt;
                 annHead.announcement.oldTail = tailAndCnt;
                 break;
@@ -530,8 +561,10 @@ public class LFQueue<T> {
         if (oldQueueSize > successfulDeqsNum){
             newHeadNode = getNthNode(ann.announcement.oldHead.node, successfulDeqsNum);
         }else{
-            newHeadNode = getNthNode(ann.announcement.oldTail.node, successfulDeqsNum);
+            newHeadNode = getNthNode(ann.announcement.oldTail.node, successfulDeqsNum - oldQueueSize);
         }
+
+        
 
         head.compareAndSet(ann, new NodeCountOrAnn(null, new NodeWithCount(newHeadNode, ann.announcement.oldHead.count
                 + successfulDeqsNum), false));
@@ -539,15 +572,18 @@ public class LFQueue<T> {
     }
 
     private Node<T> getNthNode(Node<T> node, int n)
-    {
-        for (int i = 0; i < n; i++)
-            node = node.next.get();
+    {	
+    	System.out.println("N is " + n);
+        for (int i = 0; i < n; i++){
+        		node = node.next.get();
+        	}
+            
 
         return node;
     }
 
     public static void main (String[] args) throws Exception{
-    	int THREAD_NUMBER = 1;
+    	int THREAD_NUMBER = 2;
 	
 		Thread threads[] = new Thread[THREAD_NUMBER];
 		LFQueue<Integer> queue = new LFQueue<>();
@@ -566,7 +602,7 @@ public class LFQueue<T> {
 		long stop = System.currentTimeMillis();
 
 		System.out.println("\nRuntime: " + (stop - start) + "ms.");
-		Node<Integer> temp = queue.head.get().nodeWCount.node;
+		// Node<Integer> temp = queue.head.get().nodeWCount.node;
 
 		// while(temp.next.get() != null){
 		// 	System.out.println(temp.val);

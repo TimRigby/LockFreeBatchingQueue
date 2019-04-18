@@ -1,11 +1,1 @@
-Lorem ipsum dolor sit amet, eam an simul delicatissimi, sed bonorum inermis at. Postea postulant adversarium ad per, cu qui eirmod recusabo tincidunt, idque harum temporibus at has. Esse omnes conceptam ei quo. Alia viderer vel at, cu vim nulla antiopam constituto, mel in propriae inimicus. Reque dicam laboramus has cu.\parencite{r1}
-
-Ignota neglegentur his ex. An putent essent mediocritatem sea, pri vitae soluta albucius eu. Ea mazim lobortis pri, putent dissentias has in, duo ut mucius audire. Ea his illud salutatus, te dolor conceptam liberavisse usu.
-\begin{figure}[ht]
-\centering
-\includegraphics[scale=0.35]{img1}
-\caption{An example image}
-\label{fig: test_img}
-\end{figure}
-
-Exerci explicari at nec, ut vix ceteros denique. Ad vis erat utinam. Duis vocent lucilius eos id, an usu lorem melius scripta. Quodsi platonem in mea, iudico nominavi ea vim. Dicant vidisse inciderint no qui, ius cu reque tempor nostrum. Putent iisque no sed, quis vide ad eum.
+The Lock Free Queue with Batching is a direct extension of the basic concurrent Lock Free Queue. Our first step in building this data structure is to begin with a well-performing lock free queue implementation. The Lock Free Queue with Batching allows for quick computation of its size by maintaining counters with the head and tail of the shared queue. Batching threads will receive enqueue and dequeue operations to execute locally, building a subsequence of a queue that can be then applied to the shared queue atomically to perform multiple enqueue and dequeue operations in a single access to the shared queue. Local threads will also track the number of dequeue operations taking place to be able to quickly modify the shared queue as needed while applying the batch. When a batch is applied to the shared queue, a descriptor like object replaces the head of the queue in order to have all other threads assist the completion of the batching event. 

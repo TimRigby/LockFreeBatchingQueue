@@ -1,0 +1,4 @@
+\setcounter{subsection}{0}
+Another part of our project was creating an STM \parencite{r5} implementation of our lock-free data structure. Since our implementation was done in Java, we decided to go with the Java STM Deuce \parencite{r6}. This STM library is older and lacks proper documentation, but makes up for it by being easy to implement. To create transactions in Deuce all you need to do is surround your methods that execute atomic operations with the @Atomic flag, and you can also add a parameter for a certain number of retries to catch any exceptions thrown by the method attempting to execute. This will the re enter the critical section that was previously marked with the @Atomic flag.
+
+Per the performance evaluation, we decided to vary the the number of threads and also vary the split 

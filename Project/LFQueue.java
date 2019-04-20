@@ -53,7 +53,7 @@ class TestThreads implements Runnable{
         if(thread.opsQueue.size() == 0){
             queue.enqueueToShared(val);
         }else{
-            future = queue.futureEnqueue(new FutureOp(true, new Future(val)));
+            future = futureEnqueue(new FutureOp(true, new Future(val)));
             evaluate(future);
         }
 
@@ -68,7 +68,7 @@ class TestThreads implements Runnable{
         if(thread.opsQueue.size() == 0){
             return (Integer)queue.dequeueFromShared();
         }else{
-            future = queue.futureDequeue();
+            future = futureDequeue();
             evaluate(future);
         }
 
@@ -140,7 +140,7 @@ class TestThreads implements Runnable{
         if(thread.numEnqs > 0){
 
             oldHead = queue.executeBatch(new BatchRequest(thread));
-                    System.out.println("oldHead = " + oldHead);
+                    // System.out.println("oldHead = " + oldHead);
             pairFutureWithResults(oldHead);
 
         }else{
@@ -182,7 +182,7 @@ class TestThreads implements Runnable{
             // Check if operation is Enqueue
             if(op.isEnqueue){
                 nextEnqNode = (Node<Integer>) nextEnqNode.next.get();
-                System.out.println("nextEnqNode = " + nextEnqNode);
+                // System.out.println("nextEnqNode = " + nextEnqNode);
             }
             // If dequeue operation
             else{
@@ -291,23 +291,9 @@ class TestThreads implements Runnable{
     	int enq;
 
 
-    	while(numOps.get() < 100){
+    	while(numOps.get() < 500000){
 
     		if(count == 4){
-    			FutureOp a = (FutureOp) thread.opsQueue.remove();
-    			FutureOp b = (FutureOp)thread.opsQueue.remove();
-    			FutureOp c = (FutureOp)thread.opsQueue.remove();
-    			FutureOp e = (FutureOp)thread.opsQueue.remove();
-
-    			System.out.println("Is enqueue = " + a.isEnqueue);
-    			System.out.println("Is enqueue = " + b.isEnqueue);
-    			System.out.println("Is enqueue = " + c.isEnqueue);
-    			System.out.println("Is enqueue = " + e.isEnqueue);
-
-    			thread.opsQueue.add(a);
-    			thread.opsQueue.add(b);
-    			thread.opsQueue.add(c);
-    			thread.opsQueue.add(e);
     			evaluate(d);
     			count = 0;
     		}
@@ -324,8 +310,9 @@ class TestThreads implements Runnable{
     		}
 
     		numOps.getAndIncrement();
-    		count++;
     	}
+
+    	evaluate(d);
     }
 
 
@@ -414,24 +401,6 @@ public class LFQueue<T> {
     }
 
 
-    // FutureEnqueue enqueues a FutureOp object representing an enqueue operation
-    // and returns A pointer to the Future object encapsulated in the created FutureOp will be
-    // returned by the method, so that the caller could later pass it to the Evaluate method.
-    public Future futureEnqueue(FutureOp value){
-        return null;
-    }
-
-    // FutureDequeue operates similarly, but updates the numbers of pending dequeue operations
-    // and excess dequeues
-    public Future futureDequeue(){
-        return null;
-    }
-
-    // Evaluate receives a future and ensures it is applied when the method returns.
-    public Future evaluate(Future value){
-        return null;
-    }
-
 
     // HelpAnnAndGetHead. This auxiliary method assists announcements in execution,
     // as long as there is an announcement installed in SQHead.
@@ -444,7 +413,6 @@ public class LFQueue<T> {
 
             // Getting the current head
             head = this.head.get();
-            System.out.println("head = " + head.nodeWCount.node);
 
             // Need to see how this translates to java since we don;t have the union struct.
             if(!head.isAnnouncement){
@@ -479,7 +447,6 @@ public class LFQueue<T> {
             ptr = helpAnnAndGetHead();
 
             ann.oldHead = ptr.nodeWCount;
-            System.out.println("Node = " + ptr.nodeWCount.node);
 
             newHead = new NodeCountOrAnn(ann, null, true);
             if(head.compareAndSet(ptr, newHead)){
@@ -519,7 +486,7 @@ public class LFQueue<T> {
 
             if (tailAndCnt.node.next.get() == annHead.announcement.batchToApply.firstEnq)
             {   
-                System.out.println("Made it in!");
+
                 annOldTail = tailAndCnt;
                 annHead.announcement.oldTail = tailAndCnt;
                 break;
@@ -573,7 +540,6 @@ public class LFQueue<T> {
 
     private Node<T> getNthNode(Node<T> node, int n)
     {	
-    	System.out.println("N is " + n);
         for (int i = 0; i < n; i++){
         		node = node.next.get();
         	}
@@ -583,7 +549,7 @@ public class LFQueue<T> {
     }
 
     public static void main (String[] args) throws Exception{
-    	int THREAD_NUMBER = 2;
+    	int THREAD_NUMBER = 8;
 	
 		Thread threads[] = new Thread[THREAD_NUMBER];
 		LFQueue<Integer> queue = new LFQueue<>();
